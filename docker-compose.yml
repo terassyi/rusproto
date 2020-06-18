@@ -1,0 +1,10 @@
+version: '3'
+services:
+  rusproto:
+    image: rust:latest
+    container_name: rusproto
+    tty: true
+    privileged: true
+    volumes:
+    - ./:/usr/home/rusproto
+    working_dir: /usr/home/rusproto
