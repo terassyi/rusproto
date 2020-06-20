@@ -145,7 +145,8 @@ mod tests {
 
     #[test]
     fn test_open_tap_device() {
-        let mut dev = super::TapDevice::new(&mut "test").unwrap();
+        let mut name = String::from("test");
+        let mut dev = super::TapDevice::new(&mut name).unwrap();
         assert_ne!(dev.ifreq.ifr_name.iter().map(|&c| c as u8)
                        .map(|c| c as char)
                        .collect::<String>(), "test".to_string());

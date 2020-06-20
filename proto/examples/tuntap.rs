@@ -3,6 +3,7 @@ use proto;
 use proto::device::Device;
 
 use proto::util;
+use proto::packet::ethernet::Frame;
 
 fn main() {
     let mut name = String::from("exp0");
@@ -17,7 +18,7 @@ fn main() {
     loop {
         let mut buf = [0u8;256];
         let len = dev.recv(&mut buf).unwrap();
-        println!("[info] received {} bytes", len);
-        println!("{:?}", buf.to_vec());
+        let frame = Frame::new(buf.to_vec());
+        frame.log();
     }
 }

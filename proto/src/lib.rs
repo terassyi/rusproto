@@ -1,6 +1,7 @@
 pub mod device;
 mod ethernet;
 pub mod util;
+pub mod packet;
 
 extern crate pnet;
 extern crate pnet_datalink;
