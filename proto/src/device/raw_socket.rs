@@ -5,6 +5,7 @@ use std::os::unix::io::AsRawFd;
 use crate::device::{Device, ifreq};
 use nix::unistd::{read, write};
 
+#[derive(Debug)]
 pub struct RawSocketDevice {
     fd: RawFd,
     ifreq: ifreq,

@@ -9,37 +9,43 @@ use std::os::unix::io::RawFd;
 use std::os::unix::io::AsRawFd;
 use crate::device::{Device, ifreq};
 use std::os::raw::{c_char, c_int};
+use std::borrow::BorrowMut;
 // use nix::sys::ioctl::ioctl;
-
 
 
 pub const IFNAMSIZ: usize = 16;
 
+
 pub const IFF_UP:      i16 = 0x1;
+
 pub const IFF_RUNNING: i16 = 0x40;
 
+
 pub const IFF_TUN:   i16 = 0x0001;
+pub const IFF_TAP: i16 = 0x0002;
+
 pub const IFF_NO_PI: i16 = 0x1000;
 
 nix::ioctl_write_ptr!(tunsetiff, b'T', 202, i32);
 nix::ioctl_write_ptr!(siocsifflags, b'T', 202, i32);
 
-pub struct TunDevice {
+#[derive(Debug)]
+pub struct TapDevice {
     fd: RawFd,
     ifreq: ifreq,
     mtu: usize,
 }
 
-impl AsRawFd for TunDevice {
+impl AsRawFd for TapDevice {
     fn as_raw_fd(&self) -> RawFd {
         self.fd
     }
 }
 
-impl TunDevice {
-    pub fn new(name: &str) -> io::Result<TunDevice> {
-        Ok(TunDevice{
-            fd: open_tun_device(name)?,
+impl TapDevice {
+    pub fn new(name: &mut str) -> io::Result<TapDevice> {
+        Ok(TapDevice{
+            fd: open_tap_device(name)?,
             ifreq: ifreq_for(name),
             mtu: 0,
         }
@@ -78,7 +84,7 @@ impl TunDevice {
     }
 }
 
-impl Device for TunDevice {
+impl Device for TapDevice {
     fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
         let len = read(self.fd, buf)
             .map_err(|_| io::Error::last_os_error())?;
@@ -92,7 +98,7 @@ impl Device for TunDevice {
     }
 }
 
-fn open_tun_device(name: &str) -> io::Result<RawFd> {
+fn open_tap_device(name: &mut str) -> io::Result<RawFd> {
     let dev = "/dev/net/tun";
     let fd = match fcntl::open::<str>(dev, fcntl::OFlag::O_RDWR, stat::Mode::empty()) {
         Ok(fd) => Ok(fd),
@@ -103,7 +109,7 @@ fn open_tun_device(name: &str) -> io::Result<RawFd> {
         return Err(io::ErrorKind::AddrNotAvailable.into());
     }
     req[..name.len()].copy_from_slice(name.as_bytes());
-    NativeEndian::write_i16(&mut req[16..], IFF_TUN|IFF_NO_PI);
+    NativeEndian::write_i16(&mut req[16..], IFF_TAP|IFF_NO_PI);
     unsafe { tunsetiff(fd, &mut req as *mut _ as *mut _) }
         .map_err(|_| io::Error::last_os_error() )?;
     Ok(fd)
@@ -138,8 +144,8 @@ mod tests {
     use pnet_datalink;
 
     #[test]
-    fn test_open_tun_device() {
-        let mut dev = super::TunDevice::new("test").unwrap();
+    fn test_open_tap_device() {
+        let mut dev = super::TapDevice::new(&mut "test").unwrap();
         assert_ne!(dev.ifreq.ifr_name.iter().map(|&c| c as u8)
                        .map(|c| c as char)
                        .collect::<String>(), "test".to_string());
