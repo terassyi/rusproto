@@ -14,7 +14,7 @@ fn main() {
 
     util::cmd("ip", vec!["addr", "add", "192.168.100.20/24", "dev", "exp0"]).unwrap();
     util::cmd("ip", vec!["link", "set", "up", "dev", "exp0"]).unwrap();
-
+    util::disable_ipv4_forward();
     loop {
         let mut buf = [0u8;256];
         let len = dev.recv(&mut buf).unwrap();

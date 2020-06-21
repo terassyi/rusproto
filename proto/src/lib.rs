@@ -1,5 +1,5 @@
 pub mod device;
-mod ethernet;
+pub mod ethernet;
 pub mod util;
 pub mod packet;
 

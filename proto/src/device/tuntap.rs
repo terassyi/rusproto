@@ -52,6 +52,13 @@ impl TapDevice {
         )
     }
 
+    pub fn name(&self) -> String {
+        self.ifreq.ifr_name.iter().map(|&c| c as u8)
+            .filter(|&c| c != 0)
+            .map(|c| c as char)
+            .collect::<String>()
+    }
+
     pub fn up(&self) -> io::Result<()> {
         let mut req = [0u8; 40];
         let name = String::from_utf8(self.ifreq.ifr_name.iter().map(|&i| i as u8).collect::<Vec<u8>>()).unwrap();
