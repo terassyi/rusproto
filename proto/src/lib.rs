@@ -7,6 +7,7 @@ extern crate pnet;
 extern crate pnet_datalink;
 extern crate nix;
 extern crate byteorder;
+extern crate thiserror;
 
 #[cfg(test)]
 mod tests {

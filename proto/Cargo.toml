@@ -14,6 +14,7 @@ pnet_datalink = "0.26.0"
 nix = "0.17"
 libc = "0.2"
 byteorder = "1.3"
+thiserror = "1.0"
 
 
 #[[example]]

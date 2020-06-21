@@ -3,6 +3,8 @@ use {Result};
 use byteorder::{BigEndian, ByteOrder};
 use std::fmt::Display;
 
+pub const HEADER_LENGTH: usize = 14;
+
 // ethernet frame
 #[derive(Debug)]
 pub struct Frame {
@@ -28,6 +30,13 @@ impl Frame {
         Frame {
             buffer
         }
+    }
+
+    pub fn from_body(body: &[u8]) -> Self {
+        let length = HEADER_LENGTH + body.len();
+        let mut buf = vec![0u8; length];
+        buf[field::PAYLOAD].copy_from_slice(body);
+        Frame::new(buf)
     }
 
     // getter
@@ -99,6 +108,16 @@ pub enum EtherType {
     Ipv6 = 0x0806,
     Arp = 0x86dd,
     UNKNOWN,
+}
+
+impl EtherType {
+    pub fn addr_len(&self) -> usize {
+        match self {
+            &EtherType::Ipv4 => 4,
+            &EtherType::Ipv6 => 8,
+            _ => 0,
+        }
+    }
 }
 
 impl fmt::Debug for EtherType {
@@ -216,5 +235,11 @@ mod tests {
         let mut frame = Frame::new(FRAME_BYTES.to_vec());
         frame.set_payload(&PAYLOAD_BYTES);
         assert_eq!(frame.payload(), PAYLOAD_BYTES.as_ref());
+    }
+    #[test]
+    fn test_from_body() {
+        let frame = Frame::from_body(&PAYLOAD_BYTES);
+        assert_eq!(frame.payload(), PAYLOAD_BYTES.as_ref());
+        assert_eq!(frame.dst(), MACAddress::new([0,0,0,0,0,0]));
     }
 }
