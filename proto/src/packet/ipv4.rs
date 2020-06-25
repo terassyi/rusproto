@@ -115,6 +115,26 @@ mod field {
     }
 }
 
+pub mod checksum {
+    use std::io::Cursor;
+    use byteorder::{ReadBytesExt, BigEndian};
+
+    pub fn calc(mut data: &[u8]) -> u16 {
+        let mut res: u32 = 0xffffu32;
+        let mut buffer = Cursor::new(data);
+        while let Ok(val) = buffer.read_u16::<BigEndian>() {
+            if buffer.position() == 12 {
+                continue;
+            }
+            res += val as u32;
+            if res > 0xffff {
+                res -= 0xffff;
+            }
+        }
+        !(res as u16)
+    }
+}
+
 impl Packet {
     pub fn new(buffer: Vec<u8>) -> Result<Self, Error> {
         let p = Packet { buffer };
@@ -174,6 +194,11 @@ impl Packet {
         BigEndian::read_u16(&b[field::CHECKSUM])
     }
 
+    pub fn verify_checksum(&self) -> bool {
+        let checksum = self.checksum();
+        checksum::calc(&mut self.header()) == checksum
+    }
+
     pub fn source_addr(&self) -> IpAddress {
         let b = self.buffer.as_slice();
         IpAddress::from_bytes(&b[field::SRC_ADDR])
@@ -187,6 +212,11 @@ impl Packet {
     pub fn option(&self) -> Vec<u8> {
         let b = self.buffer.as_slice();
         b[field::OPTION(self.header_length())].to_vec()
+    }
+
+    pub fn header(&self) -> &[u8] {
+        let b = self.buffer.as_slice();
+        &b[0..self.header_length()*4]
     }
 
     pub fn payload(&self) -> Vec<u8> {
@@ -349,5 +379,33 @@ mod tests {
         assert_eq!(p.destination_addr(), IpAddress::new(0x21,0x22,0x23,0x24));
         assert_eq!(p.option(), vec![0xff,0xff,0xff,0xff]);
         assert_eq!(p.payload(), vec![0xaa,0x00,0x00,0xff]);
+    }
+    #[test]
+    fn test_ip_header() {
+        let header: [u8; 24] =
+            [0x46, 0x00, 0x00, 0x1c,
+                0x00, 0x00, 0x40, 0x00,
+                0x40, 0x01, 0xd2, 0x79,
+                0x11, 0x12, 0x13, 0x14,
+                0x21, 0x22, 0x23, 0x24,
+                0xff, 0xff, 0xff, 0xff];
+        let mut p = Packet::new(PACKET_BYTES.to_vec()).unwrap();
+        assert_eq!(p.header(), &header);
+    }
+    static PACKET_HEADER: [u8; 20] =
+        [0x45, 0x00, 0x00, 0x34,
+            0x51, 0x25, 0x40, 0x00,
+            0xff, 0x06, 0x08, 0x21,
+            0x0a, 0x00, 0x0a, 0xbb,
+            0x0a, 0x00, 0x03, 0xc3];
+    #[test]
+    fn test_build_checksum() {
+        let sum = checksum::calc(&PACKET_HEADER);
+        assert_eq!(sum, 0x0821);
+    }
+    #[test]
+    fn test_verify_checksum() {
+        let mut p = Packet::new(PACKET_BYTES.to_vec()).unwrap();
+        assert_eq!(p.verify_checksum(), true)
     }
 }
